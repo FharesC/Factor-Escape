@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { ArrowRight, Check, ChevronLeft, LockKeyhole, Plus, RotateCcw, Shuffle, Trophy, Users, X, Zap } from 'lucide-react'
-import { exercises, levelMeta, teamAvatars, teamColors } from '@/data/exercises'
+import { exercises, exercisesPerLevel, levelMeta, replaceExercise, teamAvatars, teamColors } from '@/data/exercises'
 
 type Screen = 'home' | 'setup' | 'game' | 'results'
 type Team = { name: string; score: number; avatar: string; color: (typeof teamColors)[number]; correct: number; errors: number; changes: number }
@@ -72,7 +72,6 @@ function Game({ teams: initial, onFinish, onExit }: { teams: Team[]; onFinish: (
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | 'failed' | null>(null)
   const [scoreFlash, setScoreFlash] = useState<{ points: number; teams: Team[] } | null>(null)
   const meta = levelMeta[level]
-  const exercisesPerLevel = teams.length === 1 ? 1 : 5
   const current = exercises[meta.type][exerciseOrder[level][exerciseIndex]]
   const answerPieces = splitFactorization(current.answer)
   const placed = selected.length === answerPieces.length ? selected : Array<string | null>(answerPieces.length).fill(null)
@@ -112,7 +111,7 @@ function Game({ teams: initial, onFinish, onExit }: { teams: Team[]; onFinish: (
     if (feedback === 'correct' || feedback === 'failed') return
     const nextTeams = updateCurrentTeam(team => ({ ...team, score: team.score - 1, changes: team.changes + 1 }))
     if (teams.length === 1) {
-      setExerciseOrder(order => order.map((items, index) => index === level ? [...items.slice(1), items[0]] : items))
+      setExerciseOrder(order => order.map((items, index) => index === level ? replaceExercise(items, exerciseIndex) : items))
       resetQuestion()
     } else {
       advance(nextTeams)
@@ -217,7 +216,7 @@ function Game({ teams: initial, onFinish, onExit }: { teams: Team[]; onFinish: (
   </main>
 }
 
-function Results({ teams, onRestart, onHome }: { teams: Team[]; onRestart: () => void; onHome: () => void }) { const sorted = [...teams].sort((a, b) => b.score - a.score); const exerciseCount = teams.length === 1 ? 5 : 25; return <main className="screen results-screen"><Header label="Misión completada" /><div className="results-content"><div className="eyebrow"><span className="status-dot" /> ACTIVIDAD COMPLETADA · 100%</div><h1>ESCAPE<br /><em>COMPLETADO</em></h1><p className="results-subtitle">Has completado los {exerciseCount} ejercicios.</p><div className="results-grid"><div className="winner-card"><Trophy /><span>MEJOR EQUIPO</span><strong>{sorted[0].name}</strong><b>{sorted[0].score} <small>PTS</small></b></div><div className="ranking-card"><div className="card-topline"><span className="font-mono text-xs tracking-[.18em] text-slate-400">CLASIFICACIÓN FINAL</span><Badge tone="amber">{teams.length} {teams.length === 1 ? 'EQUIPO' : 'EQUIPOS'}</Badge></div>{sorted.map((team, i) => <div className="rank-row" key={team.avatar}><b>0{i + 1}</b><span className={`team-avatar team-${team.color}`}>{team.avatar}</span><strong>{team.name}</strong><span>{team.correct} aciertos · {team.changes} cambios</span><em>{team.score} pts</em></div>)}</div></div><div className="results-actions"><button className="primary-button" onClick={onRestart}><RotateCcw /> NUEVA PARTIDA</button><button className="outline-button" onClick={onHome}>VOLVER AL INICIO</button></div></div></main> }
+function Results({ teams, onRestart, onHome }: { teams: Team[]; onRestart: () => void; onHome: () => void }) { const sorted = [...teams].sort((a, b) => b.score - a.score); const exerciseCount = exercisesPerLevel * levelMeta.length; return <main className="screen results-screen"><Header label="Misión completada" /><div className="results-content"><div className="eyebrow"><span className="status-dot" /> ACTIVIDAD COMPLETADA · 100%</div><h1>ESCAPE<br /><em>COMPLETADO</em></h1><p className="results-subtitle">Has completado los {exerciseCount} ejercicios.</p><div className="results-grid"><div className="winner-card"><Trophy /><span>MEJOR EQUIPO</span><strong>{sorted[0].name}</strong><b>{sorted[0].score} <small>PTS</small></b></div><div className="ranking-card"><div className="card-topline"><span className="font-mono text-xs tracking-[.18em] text-slate-400">CLASIFICACIÓN FINAL</span><Badge tone="amber">{teams.length} {teams.length === 1 ? 'EQUIPO' : 'EQUIPOS'}</Badge></div>{sorted.map((team, i) => <div className="rank-row" key={team.avatar}><b>0{i + 1}</b><span className={`team-avatar team-${team.color}`}>{team.avatar}</span><strong>{team.name}</strong><span>{team.correct} aciertos · {team.changes} cambios</span><em>{team.score} pts</em></div>)}</div></div><div className="results-actions"><button className="primary-button" onClick={onRestart}><RotateCcw /> NUEVA PARTIDA</button><button className="outline-button" onClick={onHome}>VOLVER AL INICIO</button></div></div></main> }
 
 export default function Page() {
   const [screen, setScreen] = useState<Screen>('home')

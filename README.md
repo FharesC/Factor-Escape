@@ -2,8 +2,9 @@
 
 Juego de factorización para 1 a 5 equipos. 
 
-Con un solo equipo se activa el modo de prueba: un ejercicio aleatorio por cada
-caso, cinco en total. Con dos o más equipos se juegan los 25 ejercicios.
+Todas las partidas tienen cinco ejercicios por caso, 25 en total, tanto con un
+solo equipo como con varios. Cada caso tiene un banco de nueve ejercicios:
+cinco se seleccionan al azar y cuatro quedan como alternativas.
 
 ## Ejecutar
 
@@ -24,7 +25,10 @@ variables, signos, paréntesis y potencias en sus casillas. El turno cambia al t
 o cambiar un ejercicio. Al acertar aparece una animación con el marcador actualizado.
 Una respuesta correcta al primer intento vale 3 puntos;
 al segundo, 1 punto; al tercero, 0 puntos. Cambiar de ejercicio descuenta 1 punto.
-El orden de los ejercicios y de las piezas cambia en cada partida. Los cinco ejercicios
+Con un solo equipo, cambiar sustituye el ejercicio actual por una alternativa sin
+avanzar el contador ni repetir ejercicios ya terminados. Con varios equipos,
+cambiar mantiene el comportamiento de saltar el ejercicio y pasar el turno.
+El orden de los ejercicios y de las piezas cambia en cada partida. Los ejercicios
 de cada nivel tienen una complejidad equivalente. El banco incluye diez piezas
 distractoras que no forman parte de la respuesta correcta.
 Los ejercicios emplean únicamente las variables `x` y `y`. Factor común usa tres
@@ -36,7 +40,7 @@ escritos consecutivamente se combinan en una sola pieza.
 
 ## Verificar
 
-- `pnpm test`: valida los 25 ejercicios, sus opciones y respuestas.
+- `pnpm test`: valida los 45 ejercicios y los cambios por alternativas.
 - `pnpm typecheck`: comprobación de TypeScript.
 - `pnpm build`: compilación de producción con comprobación de tipos habilitada.
 
