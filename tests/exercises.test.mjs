@@ -1,15 +1,17 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { exercises, levelMeta } from '../data/exercises.ts'
+import { exercises, exercisesPerLevel, levelMeta, replaceExercise } from '../data/exercises.ts'
 
 test('los casos respetan el orden solicitado', () => {
   assert.deepEqual(levelMeta.map(level => level.type), ['common', 'grouping', 'perfect', 'squares', 'pair'])
 })
 
-test('cada nivel tiene cinco ejercicios equilibrados y piezas válidas', () => {
+test('cada nivel permite cinco ejercicios y cuatro alternativas con piezas válidas', () => {
+  assert.equal(exercisesPerLevel, 5)
   for (const level of levelMeta) {
     const items = exercises[level.type]
-    assert.equal(items.length, 5)
+    assert.equal(items.length, exercisesPerLevel + 4)
+    assert.equal(new Set(items.map(item => item.expression)).size, items.length)
     assert.ok(items.every(item => item.difficulty === 'ESTÁNDAR'))
     for (const item of items) {
       assert.equal(item.type, level.type)
@@ -21,8 +23,38 @@ test('cada nivel tiene cinco ejercicios equilibrados y piezas válidas', () => {
   }
 })
 
-test('hay 25 ejercicios únicos', () => {
+test('hay 45 ejercicios únicos', () => {
   const all = Object.values(exercises).flat()
-  assert.equal(all.length, 25)
-  assert.equal(new Set(all.map(item => item.id)).size, 25)
+  assert.equal(all.length, 45)
+  assert.equal(new Set(all.map(item => item.id)).size, 45)
+})
+
+test('cambiar usa las reservas y conserva ejercicios terminados y pendientes', () => {
+  const original = [0, 1, 2, 3, 4, 5, 6, 7, 8]
+  let order = original
+  for (const replacement of [5, 6, 7, 8]) {
+    order = replaceExercise(order, 2)
+    assert.ok(order)
+    assert.equal(order[2], replacement)
+    assert.deepEqual(order.slice(0, 2), [0, 1])
+    assert.deepEqual(order.slice(3, 5), [3, 4])
+    assert.equal(new Set(order).size, order.length)
+  }
+  assert.equal(replaceExercise(order, 2), null)
+  assert.deepEqual(original, [0, 1, 2, 3, 4, 5, 6, 7, 8])
+})
+
+test('el quinto ejercicio también puede cambiarse sin avanzar de nivel', () => {
+  const order = replaceExercise([0, 1, 2, 3, 4, 5, 6, 7, 8], 4)
+  assert.deepEqual(order, [0, 1, 2, 3, 5, 6, 7, 8])
+})
+
+test('las reservas se consumen por módulo aunque cambie la posición actual', () => {
+  let order = [0, 1, 2, 3, 4, 5, 6, 7, 8]
+  for (const index of [0, 1, 3, 4]) {
+    order = replaceExercise(order, index)
+    assert.ok(order)
+  }
+  assert.equal(replaceExercise(order, 4), null)
+  assert.equal(replaceExercise([0, 1, 2, 3, 4, 5, 6, 7, 8], 0)[0], 5)
 })
