@@ -1,6 +1,6 @@
 # Factor Escape
 
-Juego de factorización para 1 a 5 equipos.
+Juego de factorización para 1 a 5 equipos. 
 
 Con un solo equipo se activa el modo de prueba: un ejercicio aleatorio por cada
 caso, cinco en total. Con dos o más equipos se juegan los 25 ejercicios.
