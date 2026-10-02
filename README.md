@@ -25,9 +25,12 @@ variables, signos, paréntesis y potencias en sus casillas. El turno cambia al t
 o cambiar un ejercicio. Al acertar aparece una animación con el marcador actualizado.
 Una respuesta correcta al primer intento vale 3 puntos;
 al segundo, 1 punto; al tercero, 0 puntos. Cambiar de ejercicio descuenta 1 punto.
-Con un solo equipo, cambiar sustituye el ejercicio actual por una alternativa sin
-avanzar el contador ni repetir ejercicios ya terminados. Con varios equipos,
-cambiar mantiene el comportamiento de saltar el ejercicio y pasar el turno.
+Cambiar sustituye el ejercicio actual por una alternativa sin avanzar el contador
+y pasa el turno. Las cuatro alternativas se consumen por módulo y no se reutilizan.
+Tras mostrar la última alternativa, el siguiente cambio pasa directamente al
+siguiente módulo; en el último módulo muestra los resultados.
+Al finalizar cada módulo aparece un modal con su número y nombre. El botón
+permite continuar al siguiente módulo o ver los resultados al finalizar el último.
 El orden de los ejercicios y de las piezas cambia en cada partida. Los ejercicios
 de cada nivel tienen una complejidad equivalente. El banco incluye diez piezas
 distractoras que no forman parte de la respuesta correcta.

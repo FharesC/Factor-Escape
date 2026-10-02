@@ -18,13 +18,11 @@ function exercise(type: LevelType, number: number, expression: string, answer: s
 
 export const exercisesPerLevel = 5
 
-export function replaceExercise(order: number[], currentIndex: number): number[] {
+export function replaceExercise(order: number[], currentIndex: number): number[] | null {
   const next = [...order]
   const replacement = next.splice(exercisesPerLevel, 1)[0]
-  if (replacement === undefined) return next
-  const skipped = next[currentIndex]
+  if (replacement === undefined) return null
   next[currentIndex] = replacement
-  next.push(skipped)
   return next
 }
 
@@ -53,15 +51,15 @@ export const exercises: Record<LevelType, Exercise[]> = {
     exercise('grouping', 5, '15x² − 10x + 6xy − 4y', '(5x + 2y)(3x − 2)', ['(5x − 2y)(3x − 2)', '(5x + 2y)(3x + 2)', '(3x + 2y)(5x − 2)'], 'Agrupa 5x(3x − 2) + 2y(3x − 2).'),
   ],
   perfect: [
-    exercise('perfect', 6, '4x² + 20xy + 25y²', '(2x + 5y)²', ['(2x − 5y)²', '(4x + 5y)²', '(2x − 5y)(2x + 5y)'], 'Las raíces son 2x y 5y; su doble producto es 20xy.'),
-    exercise('perfect', 7, '9x² − 30xy + 25y²', '(3x − 5y)²', ['(3x + 5y)²', '(9x − 5y)²', '(3x − 5y)(3x + 5y)'], 'Las raíces son 3x y 5y; su doble producto es −30xy.'),
-    exercise('perfect', 8, '16x² + 24xy + 9y²', '(4x + 3y)²', ['(4x − 3y)²', '(16x + 3y)²', '(4x − 3y)(4x + 3y)'], 'Las raíces son 4x y 3y; su doble producto es 24xy.'),
-    exercise('perfect', 9, '36x² − 84xy + 49y²', '(6x − 7y)²', ['(6x + 7y)²', '(36x − 7y)²', '(6x − 7y)(6x + 7y)'], 'Las raíces son 6x y 7y; su doble producto es −84xy.'),
-    exercise('perfect', 1, 'x² + 6xy + 9y²', '(x + 3y)²', ['(x − 3y)²', '(x + 9y)²', '(x − 3y)(x + 3y)'], 'Las raíces son x y 3y; su doble producto es 6xy.'),
-    exercise('perfect', 2, '4x² − 12xy + 9y²', '(2x − 3y)²', ['(2x + 3y)²', '(4x − 3y)²', '(2x − 3y)(2x + 3y)'], 'Las raíces son 2x y 3y; el término central es negativo.'),
-    exercise('perfect', 3, '9x² + 24xy + 16y²', '(3x + 4y)²', ['(3x − 4y)²', '(9x + 4y)²', '(3x − 4y)(3x + 4y)'], 'Las raíces son 3x y 4y; su doble producto es 24xy.'),
-    exercise('perfect', 4, '16x² − 40xy + 25y²', '(4x − 5y)²', ['(4x + 5y)²', '(16x − 5y)²', '(4x − 5y)(4x + 5y)'], 'Las raíces son 4x y 5y; su doble producto es −40xy.'),
-    exercise('perfect', 5, '25x² + 60xy + 36y²', '(5x + 6y)²', ['(5x − 6y)²', '(25x + 6y)²', '(5x + 6y)(5x − 6y)'], 'Las raíces son 5x y 6y; su doble producto es 60xy.'),
+    exercise('perfect', 6, '4x² + 20xy + 25y²', '(2x + 5y)', ['(2x − 5y)²', '(4x + 5y)²', '(2x − 5y)(2x + 5y)'], 'Las raíces son 2x y 5y; su doble producto es 20xy.'),
+    exercise('perfect', 7, '9x² − 30xy + 25y²', '(3x − 5y)', ['(3x + 5y)²', '(9x − 5y)²', '(3x − 5y)(3x + 5y)'], 'Las raíces son 3x y 5y; su doble producto es −30xy.'),
+    exercise('perfect', 8, '16x² + 24xy + 9y²', '(4x + 3y)', ['(4x − 3y)²', '(16x + 3y)²', '(4x − 3y)(4x + 3y)'], 'Las raíces son 4x y 3y; su doble producto es 24xy.'),
+    exercise('perfect', 9, '36x² − 84xy + 49y²', '(6x − 7y)', ['(6x + 7y)²', '(36x − 7y)²', '(6x − 7y)(6x + 7y)'], 'Las raíces son 6x y 7y; su doble producto es −84xy.'),
+    exercise('perfect', 1, 'x² + 6xy + 9y²', '(x + 3y)', ['(x − 3y)²', '(x + 9y)²', '(x − 3y)(x + 3y)'], 'Las raíces son x y 3y; su doble producto es 6xy.'),
+    exercise('perfect', 2, '4x² − 12xy + 9y²', '(2x − 3y)', ['(2x + 3y)²', '(4x − 3y)²', '(2x − 3y)(2x + 3y)'], 'Las raíces son 2x y 3y; el término central es negativo.'),
+    exercise('perfect', 3, '9x² + 24xy + 16y²', '(3x + 4y)', ['(3x − 4y)²', '(9x + 4y)²', '(3x − 4y)(3x + 4y)'], 'Las raíces son 3x y 4y; su doble producto es 24xy.'),
+    exercise('perfect', 4, '16x² − 40xy + 25y²', '(4x − 5y)', ['(4x + 5y)²', '(16x − 5y)²', '(4x − 5y)(4x + 5y)'], 'Las raíces son 4x y 5y; su doble producto es −40xy.'),
+    exercise('perfect', 5, '25x² + 60xy + 36y²', '(5x + 6y)', ['(5x − 6y)²', '(25x + 6y)²', '(5x + 6y)(5x − 6y)'], 'Las raíces son 5x y 6y; su doble producto es 60xy.'),
   ],
   squares: [
     exercise('squares', 6, '16x² − 25y²', '(4x − 5y)(4x + 5y)', ['(4x − 5y)²', '(16x − 25y)(x + y)', '(4x − 25y)(4x + 25y)'], 'Las raíces de los términos son 4x y 5y.'),
@@ -88,7 +86,7 @@ export const exercises: Record<LevelType, Exercise[]> = {
 }
 
 export const levelMeta: { type: LevelType; number: string; name: string; short: string; icon: string }[] = [
-  { type: 'common', number: '01', name: 'Encuentra el factor', short: 'Factor común', icon: '⌬' },
+  { type: 'common', number: '01', name: '  el factor', short: 'Factor común', icon: '⌬' },
   { type: 'grouping', number: '02', name: 'Agrupa los términos', short: 'Factor común por agrupación', icon: '▦' },
   { type: 'perfect', number: '03', name: 'Completa el cuadrado', short: 'Trinomio cuadrado perfecto', icon: '△' },
   { type: 'squares', number: '04', name: 'Rompe los cuadrados', short: 'Diferencia de cuadrados', icon: '◇' },

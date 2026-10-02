@@ -123,3 +123,30 @@ body { font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", 
 .score-burst > strong { color: #d5b783; text-shadow: none; }
 .celebration-board > div { border-radius: 6px; background: #202c3d; }
 .celebration-board > div.just-scored { border-color: #8a7654; }
+
+/* Logo compartido: proporciones originales y tamaños acordes a cada pantalla. */
+.module-dialog { position: fixed; inset: 0; width: 100%; max-width: none; height: 100%; max-height: none; margin: 0; padding: 20px; border: 0; color: var(--text); background: transparent; overflow-y: auto; }
+.module-dialog[open] { display: grid; place-items: center; }
+.module-dialog::backdrop { background: rgba(10,15,23,.82); backdrop-filter: blur(5px); }
+.module-complete { width: min(100%, 520px); padding: clamp(20px, 5vw, 35px); gap: 18px; text-align: center; }
+.module-complete > span { font-size: 11px; line-height: 1.5; }
+.module-complete h2 { margin: 0; font-size: clamp(24px, 5vw, 32px); line-height: 1.2; }
+.module-complete p { margin: 0 0 6px; color: #a2afc0; font-size: 14px; line-height: 1.6; }
+.module-complete .primary-button { width: 100%; }
+.brand-mark { display: block; flex-shrink: 0; height: auto; object-fit: contain; filter: drop-shadow(0 4px 10px rgba(0, 125, 235, .16)); }
+.brand-mark-header { width: 42px; }
+.brand-lockup { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.brand-wordmark { color: var(--text); font-size: 13px; font-weight: 700; letter-spacing: .15em; white-space: nowrap; }
+.brand-wordmark b { color: #9eb7d5; }
+.brand-title { display: flex; flex-direction: column; align-items: flex-start; gap: 18px; margin-top: 24px; }
+.brand-mark-title { width: clamp(72px, 7vw, 96px); }
+.brand-title h1, .brand-title .page-title { margin-top: 0; }
+.brand-title-results { align-items: center; }
+.brand-mark-orbit { width: 52%; max-width: 104px; }
+@media (max-width: 680px) {
+  .brand-mark-header { width: 36px; }
+  .brand-lockup { gap: 9px; }
+  .brand-wordmark { font-size: 12px; letter-spacing: .08em; }
+  .brand-mark-title { width: 68px; }
+  .brand-title { gap: 14px; }
+}

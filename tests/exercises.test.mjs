@@ -32,17 +32,29 @@ test('hay 45 ejercicios únicos', () => {
 test('cambiar usa las reservas y conserva ejercicios terminados y pendientes', () => {
   const original = [0, 1, 2, 3, 4, 5, 6, 7, 8]
   let order = original
-  for (const replacement of [5, 6, 7, 8, 2]) {
+  for (const replacement of [5, 6, 7, 8]) {
     order = replaceExercise(order, 2)
+    assert.ok(order)
     assert.equal(order[2], replacement)
     assert.deepEqual(order.slice(0, 2), [0, 1])
     assert.deepEqual(order.slice(3, 5), [3, 4])
-    assert.equal(new Set(order).size, original.length)
+    assert.equal(new Set(order).size, order.length)
   }
+  assert.equal(replaceExercise(order, 2), null)
   assert.deepEqual(original, [0, 1, 2, 3, 4, 5, 6, 7, 8])
 })
 
 test('el quinto ejercicio también puede cambiarse sin avanzar de nivel', () => {
   const order = replaceExercise([0, 1, 2, 3, 4, 5, 6, 7, 8], 4)
-  assert.deepEqual(order, [0, 1, 2, 3, 5, 6, 7, 8, 4])
+  assert.deepEqual(order, [0, 1, 2, 3, 5, 6, 7, 8])
+})
+
+test('las reservas se consumen por módulo aunque cambie la posición actual', () => {
+  let order = [0, 1, 2, 3, 4, 5, 6, 7, 8]
+  for (const index of [0, 1, 3, 4]) {
+    order = replaceExercise(order, index)
+    assert.ok(order)
+  }
+  assert.equal(replaceExercise(order, 4), null)
+  assert.equal(replaceExercise([0, 1, 2, 3, 4, 5, 6, 7, 8], 0)[0], 5)
 })
