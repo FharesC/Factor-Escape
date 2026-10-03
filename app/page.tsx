@@ -4,8 +4,9 @@ import { useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import { ArrowRight, Check, ChevronLeft, LockKeyhole, Plus, RotateCcw, Shuffle, Trophy, Users, X, Zap } from 'lucide-react'
 import { exercises, exercisesPerLevel, levelMeta, replaceExercise, teamAvatars, teamColors } from '@/data/exercises'
+import MultiplayerFlow from '@/components/multiplayer-flow'
 
-type Screen = 'home' | 'setup' | 'game' | 'results'
+type Screen = 'home' | 'multiplayer' | 'setup' | 'game' | 'results'
 type Team = { name: string; score: number; avatar: string; color: (typeof teamColors)[number]; correct: number; errors: number; changes: number }
 
 const initialTeams: Team[] = [
@@ -23,7 +24,7 @@ function LevelRail({ current }: { current: number }) { return <div className="le
 function TeamPill({ team, active }: { team: Team; active: boolean }) { return <div className={`team-pill team-${team.color} ${active ? 'team-active' : ''}`}><span className="team-avatar">{team.avatar}</span><span className="truncate">{team.name}</span><b>{team.score}</b></div> }
 function Scoreboard({ teams, turn }: { teams: Team[]; turn: number }) { return <aside className="scoreboard"><div className="eyebrow"><Users /> MARCADOR EN VIVO</div><div className="flex flex-col gap-2">{teams.map((team, i) => <TeamPill key={team.avatar} team={team} active={turn === i} />)}</div></aside> }
 
-function Home({ onStart }: { onStart: () => void }) { return <main className="screen home-screen"><Header label="Inicio" /><div className="home-content"><div className="home-copy"><div className="eyebrow"><span className="status-dot" /> ACTIVIDAD DE FACTORIZACIÓN</div><div className="brand-title"><h1>FACTOR<br /><em>ESCAPE</em></h1></div><p>Una dinámica por equipos para practicar<br />los <strong>5 primeros casos de factorización</strong>.</p><button className="primary-button" onClick={onStart}>INICIAR PARTIDA <ArrowRight /></button><div className="home-note"><Zap /> Hecho por el grupo #1</div></div><div className="level-orbit"><div className="orbit-ring ring-one" /><div className="orbit-ring ring-two" /><div className="orbit-core"><small>5 NIVELES</small></div>{levelMeta.map((item, i) => <div key={item.type} className={`orbit-node node-${i}`}><span>{item.icon}</span><small>0{i + 1}</small></div>)}</div></div><div className="home-footer"><span>FACTOR ESCAPE · RECURSO EDUCATIVO</span><span>FUNCIONA SIN CONEXIÓN</span></div></main> }
+function Home({ onStart }: { onStart: () => void }) { return <main className="screen home-screen"><Header label="Inicio" /><div className="home-content"><div className="home-copy"><div className="eyebrow"><span className="status-dot" /> ACTIVIDAD DE FACTORIZACIÓN</div><div className="brand-title"><h1>FACTOR<br /><em>ESCAPE</em></h1></div><p>Una dinámica multijugador para practicar<br />los <strong>5 primeros casos de factorización</strong>.</p><button className="primary-button" onClick={onStart}>CREAR O UNIRSE <ArrowRight /></button><div className="home-note"><Zap /> Hecho por el grupo #1</div></div><div className="level-orbit"><div className="orbit-ring ring-one" /><div className="orbit-ring ring-two" /><div className="orbit-core"><small>5 NIVELES</small></div>{levelMeta.map((item, i) => <div key={item.type} className={`orbit-node node-${i}`}><span>{item.icon}</span><small>0{i + 1}</small></div>)}</div></div><div className="home-footer"><span>FACTOR ESCAPE · RECURSO EDUCATIVO</span><span>MULTIJUGADOR EN TIEMPO REAL</span></div></main> }
 
 function Setup({ onBack, onStart }: { onBack: () => void; onStart: (teams: Team[]) => void }) {
   const [teams, setTeams] = useState(initialTeams)
@@ -280,5 +281,5 @@ function Results({ teams, onRestart, onHome }: { teams: Team[]; onRestart: () =>
 export default function Page() {
   const [screen, setScreen] = useState<Screen>('home')
   const [teams, setTeams] = useState<Team[]>(initialTeams)
-  return <div className="page-wrap">{screen === 'home' && <Home onStart={() => setScreen('setup')} />}{screen === 'setup' && <Setup onBack={() => setScreen('home')} onStart={next => { setTeams(next); setScreen('game') }} />}{screen === 'game' && <Game teams={teams} onExit={() => setScreen('home')} onFinish={next => { setTeams(next); setScreen('results') }} />}{screen === 'results' && <Results teams={teams} onRestart={() => setScreen('setup')} onHome={() => setScreen('home')} />}</div>
+  return <div className="page-wrap">{screen === 'home' && <Home onStart={() => setScreen('multiplayer')} />}{screen === 'multiplayer' && <MultiplayerFlow onBack={() => setScreen('home')} />}{screen === 'setup' && <Setup onBack={() => setScreen('home')} onStart={next => { setTeams(next); setScreen('game') }} />}{screen === 'game' && <Game teams={teams} onExit={() => setScreen('home')} onFinish={next => { setTeams(next); setScreen('results') }} />}{screen === 'results' && <Results teams={teams} onRestart={() => setScreen('setup')} onHome={() => setScreen('home')} />}</div>
 }

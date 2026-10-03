@@ -1,16 +1,19 @@
 # Factor Escape
 
-Juego de factorización para 1 a 5 equipos. 
+Juego multijugador de factorización en tiempo real, inspirado en la dinámica de
+Kahoot. Una persona crea una sala y comparte un código de seis caracteres; los
+demás participantes escriben el código y su nombre para entrar.
 
-Todas las partidas tienen cinco ejercicios por caso, 25 en total, tanto con un
-solo equipo como con varios. Cada caso tiene un banco de nueve ejercicios:
-cinco se seleccionan al azar y cuatro quedan como alternativas.
+Cada partida tiene cinco rondas, una por cada caso de factorización. Las salas
+admiten hasta 20 participantes, el anfitrión controla el inicio y el avance, y
+el marcador se actualiza para todos en tiempo real.
 
 ## Ejecutar
 
 Usa Node.js 24 o superior y pnpm. Instala con `pnpm install`, inicia con
-`pnpm dev` y abre http://localhost:3000. Los scripts usan Webpack para evitar
-el error de creación de procesos de Turbopack observado en Windows.
+`pnpm dev` y abre http://localhost:3000. Para jugar desde otros dispositivos de
+la misma red, abre la dirección IP local de la computadora seguida de `:3000`.
+Las salas se guardan en memoria y se eliminan al reiniciar el servidor.
 
 ## Recorrido
 
@@ -20,17 +23,11 @@ el error de creación de procesos de Turbopack observado en Windows.
 4. Diferencia de cuadrados: raíces simples → coeficientes → potencias mayores.
 5. Trinomio x² + bx + c: pareja positiva → pareja negativa → signos opuestos.
 
-Cada nivel tiene cinco ejercicios. La respuesta se construye colocando números,
+La respuesta se construye colocando números,
 variables, signos, paréntesis y potencias en sus casillas. El turno cambia al terminar
-o cambiar un ejercicio. Al acertar aparece una animación con el marcador actualizado.
+un ejercicio. Al acertar, el marcador se actualiza para todos los participantes.
 Una respuesta correcta al primer intento vale 3 puntos;
-al segundo, 1 punto; al tercero, 0 puntos. Cambiar de ejercicio descuenta 1 punto.
-Cambiar sustituye el ejercicio actual por una alternativa sin avanzar el contador
-y pasa el turno. Las cuatro alternativas se consumen por módulo y no se reutilizan.
-Tras mostrar la última alternativa, el siguiente cambio pasa directamente al
-siguiente módulo; en el último módulo muestra los resultados.
-Al finalizar cada módulo aparece un modal con su número y nombre. El botón
-permite continuar al siguiente módulo o ver los resultados al finalizar el último.
+al segundo, 1 punto; al tercero, 0 puntos.
 El orden de los ejercicios y de las piezas cambia en cada partida. Los ejercicios
 de cada nivel tienen una complejidad equivalente. El banco incluye diez piezas
 distractoras que no forman parte de la respuesta correcta.
