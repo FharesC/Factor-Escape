@@ -5,8 +5,9 @@ Kahoot. Una persona crea una sala y comparte un código de seis caracteres; los
 demás participantes escriben el código y su nombre para entrar.
 
 Cada partida tiene cinco rondas, una por cada caso de factorización. Las salas
-admiten hasta 20 participantes, el anfitrión controla el inicio y el avance, y
-el marcador se actualiza para todos en tiempo real.
+admiten hasta 20 participantes. Quien crea la sala entra como administrador: no
+resuelve ejercicios ni participa en el puntaje, ve el progreso de los equipos y
+decide cuándo avanzar. El marcador se actualiza para todos en tiempo real.
 
 ## Ejecutar
 

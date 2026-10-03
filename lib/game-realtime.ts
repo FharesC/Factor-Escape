@@ -2,7 +2,7 @@ import type { WebSocket } from '@vercel/functions'
 import { redis } from './redis.ts'
 
 export type Player = { id: string; name: string; score: number; answered: boolean; connected: boolean }
-export type Room = { code: string; hostId: string; status: 'lobby' | 'playing' | 'results'; questionIndex: number; exerciseIds: string[]; players: Player[] }
+export type Room = { code: string; hostId: string; hostName: string; status: 'lobby' | 'playing' | 'results'; questionIndex: number; exerciseIds: string[]; players: Player[] }
 export type ClientEvent = { type: string; requestId?: string; clientId?: string; code?: string; name?: string; exerciseIds?: string[]; correct?: boolean; attempt?: number }
 
 type Connection = { clientId: string; code: string }
@@ -91,7 +91,7 @@ async function create(ws: WebSocket, event: ClientEvent) {
   let room: Room | null = null
   for (let attempt = 0; attempt < 5 && !room; attempt++) {
     const code = roomCode()
-    const candidate: Room = { code, hostId: clientId, status: 'lobby', questionIndex: 0, exerciseIds: event.exerciseIds, players: [{ id: clientId, name, score: 0, answered: false, connected: true }] }
+    const candidate: Room = { code, hostId: clientId, hostName: name, status: 'lobby', questionIndex: 0, exerciseIds: event.exerciseIds, players: [] }
     if (await saveNewRoom(candidate)) room = candidate
   }
   if (!room) return reply(ws, event.requestId, { ok: false, error: 'No fue posible crear la sala.' })
@@ -122,6 +122,7 @@ async function resume(ws: WebSocket, event: ClientEvent) {
   const code = cleanCode(event.code)
   const clientId = String(event.clientId || '').slice(0, 64)
   const result = await updateRoom(code, room => {
+    if (room.hostId === clientId) return { room }
     const player = room.players.find(item => item.id === clientId)
     if (!player) return { error: 'Ya no perteneces a esta sala.' }
     player.connected = true
@@ -137,22 +138,22 @@ async function action(ws: WebSocket, event: ClientEvent) {
   const connection = hub.connections.get(ws)
   if (!connection) return reply(ws, event.requestId, { ok: false, error: 'Conexión sin sala.' })
   const result = await updateRoom(connection.code, room => {
+    const isHost = room.hostId === connection.clientId
     const player = room.players.find(item => item.id === connection.clientId)
-    if (!player) return { error: 'Participante no encontrado.' }
     if (event.type === 'start') {
-      if (room.hostId !== player.id || room.status !== 'lobby') return { error: 'Solo el anfitrión puede iniciar.' }
+      if (!isHost || room.status !== 'lobby') return { error: 'Solo el administrador puede iniciar.' }
+      if (!room.players.some(item => item.connected)) return { error: 'Debe haber al menos un participante.' }
       room.status = 'playing'; room.questionIndex = 0
       room.players.forEach(item => { item.answered = false })
     } else if (event.type === 'answer') {
+      if (!player || isHost) return { error: 'El administrador no responde ejercicios.' }
       if (room.status !== 'playing' || player.answered) return { error: 'La respuesta ya fue registrada.' }
       const attempt = Math.max(1, Math.min(3, Number(event.attempt) || 3))
       const points = event.correct ? (attempt === 1 ? 3 : attempt === 2 ? 1 : 0) : 0
       player.score += points; player.answered = true
       return { room, points }
     } else if (event.type === 'next') {
-      if (room.hostId !== player.id || room.status !== 'playing') return { error: 'Solo el anfitrión puede avanzar.' }
-      const active = room.players.filter(item => item.connected)
-      if (!active.length || !active.every(item => item.answered)) return { error: 'Aún faltan respuestas.' }
+      if (!isHost || room.status !== 'playing') return { error: 'Solo el administrador puede avanzar.' }
       if (room.questionIndex >= room.exerciseIds.length - 1) room.status = 'results'
       else { room.questionIndex += 1; room.players.forEach(item => { item.answered = false }) }
     }
@@ -167,14 +168,11 @@ async function leave(ws: WebSocket, event: ClientEvent) {
   const connection = hub.connections.get(ws)
   if (!connection?.code) return reply(ws, event.requestId, { ok: true })
   const result = await updateRoom(connection.code, room => {
+    if (room.hostId === connection.clientId) return { room }
     const player = room.players.find(item => item.id === connection.clientId)
     if (!player) return { room }
     if (room.status === 'lobby') room.players = room.players.filter(item => item.id !== player.id)
     else player.connected = false
-    if (room.hostId === player.id) {
-      const replacement = room.players.find(item => item.connected && item.id !== player.id)
-      if (replacement) room.hostId = replacement.id
-    }
     return { room }
   })
   hub.connections.delete(ws)
@@ -207,6 +205,7 @@ export async function unregister(ws: WebSocket) {
   const stillLocal = [...hub.connections.values()].some(item => item.code === connection.code && item.clientId === connection.clientId)
   if (stillLocal) return
   const result = await updateRoom(connection.code, room => {
+    if (room.hostId === connection.clientId) return { room }
     const player = room.players.find(item => item.id === connection.clientId)
     if (!player) return { room }
     player.connected = false
