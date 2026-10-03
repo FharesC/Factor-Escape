@@ -11,9 +11,20 @@ el marcador se actualiza para todos en tiempo real.
 ## Ejecutar
 
 Usa Node.js 24 o superior y pnpm. Instala con `pnpm install`, inicia con
-`pnpm dev` y abre http://localhost:3000. Para jugar desde otros dispositivos de
-la misma red, abre la dirección IP local de la computadora seguida de `:3000`.
-Las salas se guardan en memoria y se eliminan al reiniciar el servidor.
+`pnpm dev` y abre http://localhost:3000. Sin `REDIS_URL`, el servidor de desarrollo
+guarda las salas temporalmente en memoria. En Vercel, Redis es obligatorio para
+compartir salas entre distintas instancias.
+
+## Publicar en Internet
+
+1. En el Marketplace del proyecto de Vercel, agrega la integración Upstash Redis.
+2. Comprueba que la integración haya creado la variable `REDIS_URL`.
+3. En `Settings → Functions`, activa Fluid Compute.
+4. Vuelve a desplegar el proyecto.
+
+Vercel sirve la conexión WebSocket desde `/api/ws`. Redis mantiene las salas
+sincronizadas aunque los jugadores lleguen a distintas instancias. Cada sala
+caduca automáticamente cuatro horas después de su última actividad.
 
 ## Recorrido
 

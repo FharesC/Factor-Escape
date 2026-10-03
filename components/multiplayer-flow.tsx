@@ -1,13 +1,13 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowRight, Check, ChevronLeft, Copy, Crown, Hash, LogIn, Play, RotateCcw, Users } from 'lucide-react'
-import { io, type Socket } from 'socket.io-client'
 import { exercises, levelMeta, type Exercise } from '@/data/exercises'
 
 type Player = { id: string; name: string; score: number; answered: boolean; connected: boolean }
 type Room = { code: string; hostId: string; status: 'lobby' | 'playing' | 'results'; questionIndex: number; exerciseIds: string[]; players: Player[] }
 type Reply = { ok: boolean; error?: string; room?: Room; points?: number }
+type Send = (type: string, payload?: Record<string, unknown>) => Promise<Reply>
 
 const exerciseMap = new Map(Object.values(exercises).flat().map(exercise => [exercise.id, exercise]))
 const split = (value: string): string[] => [...(value.replaceAll(' ', '').match(/[a-zA-Z](?:[²³⁴⁵⁶])?|\d+|[()+−]/g) ?? [])]
@@ -22,7 +22,7 @@ function piecesFor(exercise: Exercise) {
 function BackButton({ onClick }: { onClick: () => void }) { return <button className="icon-button" onClick={onClick} aria-label="Volver"><ChevronLeft /></button> }
 function RoomHeader({ room, onLeave }: { room: Room; onLeave: () => void }) { return <header className="topbar multiplayer-topbar"><div className="flex items-center gap-4"><BackButton onClick={onLeave} /><strong className="room-brand">FACTOR ESCAPE</strong></div><div className="room-code-small"><Hash /> SALA <b>{room.code}</b></div></header> }
 
-function MultiplayerEntry({ socket, onRoom, onBack }: { socket: Socket; onRoom: (room: Room) => void; onBack: () => void }) {
+function MultiplayerEntry({ send, onRoom, onBack }: { send: Send; onRoom: (room: Room) => void; onBack: () => void }) {
   const [mode, setMode] = useState<'choose' | 'create' | 'join'>('choose')
   const [name, setName] = useState('')
   const [code, setCode] = useState('')
@@ -32,17 +32,16 @@ function MultiplayerEntry({ socket, onRoom, onBack }: { socket: Socket; onRoom: 
     const candidates = exercises[level.type]
     return candidates[Math.floor(Math.random() * candidates.length)].id
   })
-  const submit = () => {
+  const submit = async () => {
     setError('')
     if (!name.trim()) return setError('Escribe tu nombre para continuar.')
     setBusy(true)
-    const event = mode === 'create' ? 'room:create' : 'room:join'
+    const event = mode === 'create' ? 'create' : 'join'
     const payload = mode === 'create' ? { name, exerciseIds: exerciseIds() } : { name, code: code.toUpperCase() }
-    socket.emit(event, payload, (reply: Reply) => {
-      setBusy(false)
-      if (!reply.ok || !reply.room) return setError(reply.error || 'No fue posible entrar a la sala.')
-      onRoom(reply.room)
-    })
+    const reply = await send(event, payload)
+    setBusy(false)
+    if (!reply.ok || !reply.room) return setError(reply.error || 'No fue posible entrar a la sala.')
+    onRoom(reply.room)
   }
   return <main className="screen"><header className="topbar"><div className="flex items-center gap-4"><BackButton onClick={mode === 'choose' ? onBack : () => { setMode('choose'); setError('') }} /><strong className="room-brand">FACTOR ESCAPE</strong></div><span className="header-status">Multijugador en tiempo real</span></header><div className="multiplayer-entry">
     <div className="eyebrow"><Users /> SALAS MULTIJUGADOR</div>
@@ -57,11 +56,11 @@ function MultiplayerEntry({ socket, onRoom, onBack }: { socket: Socket; onRoom: 
   </div></main>
 }
 
-function Lobby({ room, socketId, socket, onLeave }: { room: Room; socketId: string; socket: Socket; onLeave: () => void }) {
-  const host = room.hostId === socketId
+function Lobby({ room, clientId, send, onLeave }: { room: Room; clientId: string; send: Send; onLeave: () => void }) {
+  const host = room.hostId === clientId
   const [copied, setCopied] = useState(false)
   const copyCode = async () => { await navigator.clipboard.writeText(room.code); setCopied(true); setTimeout(() => setCopied(false), 1300) }
-  return <main className="screen"><RoomHeader room={room} onLeave={onLeave} /><div className="lobby-layout"><section className="lobby-code"><span>CÓDIGO DE LA SALA</span><strong>{room.code}</strong><button className="outline-button" onClick={copyCode}><Copy /> {copied ? 'COPIADO' : 'COPIAR CÓDIGO'}</button><p>Los participantes deben abrir esta misma dirección e ingresar el código.</p></section><section className="setup-card lobby-players"><div className="card-topline"><span>PARTICIPANTES</span><b>{room.players.length} / 20</b></div><div className="player-list">{room.players.map(player => <div key={player.id} className="player-row"><span className="team-avatar">{player.name.charAt(0).toUpperCase()}</span><strong>{player.name}</strong>{player.id === room.hostId && <Crown aria-label="Anfitrión" />}</div>)}</div>{host ? <button className="primary-button lobby-start" onClick={() => socket.emit('game:start', { code: room.code })}><Play /> INICIAR PARTIDA</button> : <div className="waiting-copy"><span className="status-dot" /> Esperando al anfitrión…</div>}</section></div></main>
+  return <main className="screen"><RoomHeader room={room} onLeave={onLeave} /><div className="lobby-layout"><section className="lobby-code"><span>CÓDIGO DE LA SALA</span><strong>{room.code}</strong><button className="outline-button" onClick={copyCode}><Copy /> {copied ? 'COPIADO' : 'COPIAR CÓDIGO'}</button><p>Los participantes deben abrir esta misma dirección e ingresar el código.</p></section><section className="setup-card lobby-players"><div className="card-topline"><span>PARTICIPANTES</span><b>{room.players.length} / 20</b></div><div className="player-list">{room.players.map(player => <div key={player.id} className="player-row"><span className="team-avatar">{player.name.charAt(0).toUpperCase()}</span><strong>{player.name}</strong>{player.id === room.hostId && <Crown aria-label="Anfitrión" />}</div>)}</div>{host ? <button className="primary-button lobby-start" onClick={() => { void send('start') }}><Play /> INICIAR PARTIDA</button> : <div className="waiting-copy"><span className="status-dot" /> Esperando al anfitrión…</div>}</section></div></main>
 }
 
 function ExerciseBuilder({ exercise, disabled, onComplete }: { exercise: Exercise; disabled: boolean; onComplete: (correct: boolean, attempt: number) => void }) {
@@ -97,38 +96,73 @@ function ExerciseBuilder({ exercise, disabled, onComplete }: { exercise: Exercis
   return <div className="mini-game realtime-builder"><div className="math-display">{exercise.expression}</div><div className="game-instruction">CONSTRUYE LA FACTORIZACIÓN CORRECTA</div><div className="factor-slots">{placed.map((piece, index) => <button key={index} className={`factor-slot ${active === index ? 'active' : ''} ${piece ? 'filled' : ''}`} onClick={() => piece ? clear(index) : setActive(index)} disabled={disabled}>{piece || '?'}</button>)}</div><div className="piece-bank">{available.map(piece => <button key={piece.id} className="factor-piece" disabled={piece.used || disabled} onClick={() => put(piece.value)}>{piece.value}</button>)}</div>{message && <div className="inline-feedback wrong">{message}</div>}<div className="exercise-actions"><button className="outline-button" onClick={() => { setPlaced(answer.map(() => null)); setActive(0) }} disabled={disabled}><RotateCcw /> LIMPIAR</button><button className="primary-button" onClick={verify} disabled={disabled || placed.some(piece => !piece)}>COMPROBAR <Check /></button></div><span className="attempt-label">INTENTO {attempt} DE 3</span></div>
 }
 
-function LiveGame({ room, socketId, socket, onLeave }: { room: Room; socketId: string; socket: Socket; onLeave: () => void }) {
+function LiveGame({ room, clientId, send, onLeave }: { room: Room; clientId: string; send: Send; onLeave: () => void }) {
   const exercise = exerciseMap.get(room.exerciseIds[room.questionIndex])
-  const player = room.players.find(item => item.id === socketId)
-  const host = room.hostId === socketId
+  const player = room.players.find(item => item.id === clientId)
+  const host = room.hostId === clientId
   const connected = room.players.filter(item => item.connected)
   const allAnswered = connected.length > 0 && connected.every(item => item.answered)
   const [points, setPoints] = useState<number | null>(null)
   if (!exercise || !player) return null
-  const submit = (correct: boolean, attempt: number) => socket.emit('game:answer', { code: room.code, correct, attempt }, (reply: Reply) => { if (reply.ok) setPoints(reply.points || 0) })
-  return <main className="screen game-screen"><RoomHeader room={room} onLeave={onLeave} /><div className="live-game-layout"><section className="live-main"><div className="game-heading"><div><div className="eyebrow">RONDA {room.questionIndex + 1} / {room.exerciseIds.length} · {levelMeta[room.questionIndex].short}</div><h2>{levelMeta[room.questionIndex].name}</h2></div><div className="turn-card">JUGANDO COMO<strong>{player.name}</strong></div></div><div className="challenge-card">{player.answered ? <div className="answered-panel"><Check /><h3>Respuesta registrada</h3><strong>+{points ?? 0} puntos</strong><p>{allAnswered ? 'Todos respondieron.' : `Esperando a ${connected.filter(item => !item.answered).length} participante(s)…`}</p>{host && allAnswered && <button className="primary-button" onClick={() => { setPoints(null); socket.emit('game:next', { code: room.code }) }}>{room.questionIndex === room.exerciseIds.length - 1 ? 'VER RESULTADOS' : 'SIGUIENTE EJERCICIO'} <ArrowRight /></button>}</div> : <ExerciseBuilder key={exercise.id} exercise={exercise} disabled={false} onComplete={submit} />}</div></section><aside className="live-scoreboard"><div className="eyebrow"><Users /> MARCADOR EN VIVO</div>{[...room.players].sort((a, b) => b.score - a.score).map((item, index) => <div className={`live-score-row ${item.id === socketId ? 'me' : ''}`} key={item.id}><b>{index + 1}</b><span>{item.name}</span><strong>{item.score}</strong>{item.answered && <Check />}</div>)}</aside></div></main>
+  const submit = async (correct: boolean, attempt: number) => { const reply = await send('answer', { correct, attempt }); if (reply.ok) setPoints(reply.points || 0) }
+  return <main className="screen game-screen"><RoomHeader room={room} onLeave={onLeave} /><div className="live-game-layout"><section className="live-main"><div className="game-heading"><div><div className="eyebrow">RONDA {room.questionIndex + 1} / {room.exerciseIds.length} · {levelMeta[room.questionIndex].short}</div><h2>{levelMeta[room.questionIndex].name}</h2></div><div className="turn-card">JUGANDO COMO<strong>{player.name}</strong></div></div><div className="challenge-card">{player.answered ? <div className="answered-panel"><Check /><h3>Respuesta registrada</h3><strong>+{points ?? 0} puntos</strong><p>{allAnswered ? 'Todos respondieron.' : `Esperando a ${connected.filter(item => !item.answered).length} participante(s)…`}</p>{host && allAnswered && <button className="primary-button" onClick={() => { setPoints(null); void send('next') }}>{room.questionIndex === room.exerciseIds.length - 1 ? 'VER RESULTADOS' : 'SIGUIENTE EJERCICIO'} <ArrowRight /></button>}</div> : <ExerciseBuilder key={exercise.id} exercise={exercise} disabled={false} onComplete={submit} />}</div></section><aside className="live-scoreboard"><div className="eyebrow"><Users /> MARCADOR EN VIVO</div>{[...room.players].sort((a, b) => b.score - a.score).map((item, index) => <div className={`live-score-row ${item.id === clientId ? 'me' : ''}`} key={item.id}><b>{index + 1}</b><span>{item.name}</span><strong>{item.score}</strong>{item.answered && <Check />}</div>)}</aside></div></main>
 }
 
-function LiveResults({ room, socketId, onLeave }: { room: Room; socketId: string; onLeave: () => void }) {
+function LiveResults({ room, clientId, onLeave }: { room: Room; clientId: string; onLeave: () => void }) {
   const ranking = [...room.players].sort((a, b) => b.score - a.score)
-  return <main className="screen results-screen"><RoomHeader room={room} onLeave={onLeave} /><div className="results-content"><div className="eyebrow">PARTIDA COMPLETADA</div><h1>RESULTADOS<br /><em>FINALES</em></h1><div className="ranking-card live-results">{ranking.map((player, index) => <div className={`rank-row ${player.id === socketId ? 'current-player' : ''}`} key={player.id}><b>{index + 1}</b><span className="team-avatar">{player.name.charAt(0).toUpperCase()}</span><strong>{player.name}</strong><span>{index === 0 ? 'Ganador' : 'Participante'}</span><em>{player.score} pts</em></div>)}</div><button className="outline-button" onClick={onLeave}>SALIR DE LA SALA</button></div></main>
+  return <main className="screen results-screen"><RoomHeader room={room} onLeave={onLeave} /><div className="results-content"><div className="eyebrow">PARTIDA COMPLETADA</div><h1>RESULTADOS<br /><em>FINALES</em></h1><div className="ranking-card live-results">{ranking.map((player, index) => <div className={`rank-row ${player.id === clientId ? 'current-player' : ''}`} key={player.id}><b>{index + 1}</b><span className="team-avatar">{player.name.charAt(0).toUpperCase()}</span><strong>{player.name}</strong><span>{index === 0 ? 'Ganador' : 'Participante'}</span><em>{player.score} pts</em></div>)}</div><button className="outline-button" onClick={onLeave}>SALIR DE LA SALA</button></div></main>
 }
 
 export default function MultiplayerFlow({ onBack }: { onBack: () => void }) {
-  const [socket, setSocket] = useState<Socket | null>(null)
-  const [socketId, setSocketId] = useState('')
+  const clientId = useMemo(() => crypto.randomUUID(), [])
   const [room, setRoom] = useState<Room | null>(null)
+  const roomRef = useRef<Room | null>(null)
+  const socketRef = useRef<WebSocket | null>(null)
+  const pendingRef = useRef(new Map<string, (reply: Reply) => void>())
+  const [connected, setConnected] = useState(false)
+  useEffect(() => { roomRef.current = room }, [room])
   useEffect(() => {
-    const connection = io({ path: '/socket.io' })
-    connection.on('connect', () => setSocketId(connection.id || ''))
-    connection.on('room:state', (state: Room) => setRoom(state))
-    setSocket(connection)
-    return () => { connection.disconnect() }
-  }, [])
-  const leave = () => { socket?.disconnect(); setRoom(null); onBack() }
-  if (!socket || !socket.connected) return <main className="screen"><div className="connection-screen"><span className="status-dot" /><strong>Conectando con el servidor…</strong></div></main>
-  if (!room) return <MultiplayerEntry socket={socket} onRoom={setRoom} onBack={onBack} />
-  if (room.status === 'lobby') return <Lobby room={room} socketId={socketId} socket={socket} onLeave={leave} />
-  if (room.status === 'playing') return <LiveGame room={room} socketId={socketId} socket={socket} onLeave={leave} />
-  return <LiveResults room={room} socketId={socketId} onLeave={leave} />
+    let cancelled = false
+    let retry = 1000
+    let reconnectTimer: ReturnType<typeof setTimeout>
+    const connect = () => {
+      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
+      const socket = new WebSocket(`${protocol}//${location.host}/api/ws`)
+      socketRef.current = socket
+      socket.addEventListener('open', () => {
+        if (cancelled) return
+        setConnected(true); retry = 1000
+        if (roomRef.current) {
+          const requestId = crypto.randomUUID()
+          pendingRef.current.set(requestId, response => { if (!response.ok) setRoom(null); else if (response.room) setRoom(response.room) })
+          socket.send(JSON.stringify({ type: 'resume', requestId, clientId, code: roomRef.current.code }))
+        }
+      })
+      socket.addEventListener('message', event => {
+        const message = JSON.parse(String(event.data)) as ({ type: 'state'; room: Room } | ({ type: 'reply'; requestId?: string } & Reply))
+        if (message.type === 'state') setRoom(message.room)
+        else if (message.requestId) { pendingRef.current.get(message.requestId)?.(message); pendingRef.current.delete(message.requestId) }
+      })
+      socket.addEventListener('close', () => {
+        setConnected(false)
+        if (!cancelled) { reconnectTimer = setTimeout(connect, retry); retry = Math.min(retry * 2, 30000) }
+      })
+    }
+    connect()
+    return () => { cancelled = true; clearTimeout(reconnectTimer); socketRef.current?.close() }
+  }, [clientId])
+  const send = useCallback<Send>((type, payload = {}) => new Promise(resolve => {
+    const socket = socketRef.current
+    if (!socket || socket.readyState !== WebSocket.OPEN) return resolve({ ok: false, error: 'Reconectando con la sala…' })
+    const requestId = crypto.randomUUID()
+    pendingRef.current.set(requestId, resolve)
+    socket.send(JSON.stringify({ type, requestId, clientId, ...payload }))
+    setTimeout(() => { if (pendingRef.current.delete(requestId)) resolve({ ok: false, error: 'El servidor tardó demasiado en responder.' }) }, 10000)
+  }), [clientId])
+  const leave = async () => { await send('leave'); socketRef.current?.close(); setRoom(null); onBack() }
+  if (!connected) return <main className="screen"><div className="connection-screen"><span className="status-dot" /><strong>Conectando con el servidor…</strong></div></main>
+  if (!room) return <MultiplayerEntry send={send} onRoom={setRoom} onBack={onBack} />
+  if (room.status === 'lobby') return <Lobby room={room} clientId={clientId} send={send} onLeave={leave} />
+  if (room.status === 'playing') return <LiveGame room={room} clientId={clientId} send={send} onLeave={leave} />
+  return <LiveResults room={room} clientId={clientId} onLeave={leave} />
 }
