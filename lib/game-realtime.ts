@@ -1,7 +1,7 @@
 import type { WebSocket } from '@vercel/functions'
 import { redis } from './redis.ts'
 
-export type Player = { id: string; name: string; score: number; answered: boolean; connected: boolean }
+export type Player = { id: string; name: string; score: number; answered: boolean; connected: boolean; roundPoints: number; roundCorrect: boolean }
 export type Room = { code: string; hostId: string; hostName: string; status: 'lobby' | 'playing' | 'results'; questionIndex: number; exerciseIds: string[]; players: Player[] }
 export type ClientEvent = { type: string; requestId?: string; clientId?: string; code?: string; name?: string; exerciseIds?: string[]; correct?: boolean; attempt?: number }
 
@@ -87,7 +87,7 @@ function roomCode() {
 async function create(ws: WebSocket, event: ClientEvent) {
   const name = cleanName(event.name)
   const clientId = String(event.clientId || '').slice(0, 64)
-  if (!name || !clientId || !Array.isArray(event.exerciseIds) || event.exerciseIds.length !== 5) return reply(ws, event.requestId, { ok: false, error: 'Datos de sala inválidos.' })
+  if (!name || !clientId || !Array.isArray(event.exerciseIds) || event.exerciseIds.length !== 10) return reply(ws, event.requestId, { ok: false, error: 'Datos de sala inválidos.' })
   let room: Room | null = null
   for (let attempt = 0; attempt < 5 && !room; attempt++) {
     const code = roomCode()
@@ -109,7 +109,7 @@ async function join(ws: WebSocket, event: ClientEvent) {
     if (!name || !clientId) return { error: 'Escribe tu nombre.' }
     if (room.players.some(player => player.name.toLocaleLowerCase('es') === name.toLocaleLowerCase('es'))) return { error: 'Ese nombre ya está en uso.' }
     if (room.players.length >= 20) return { error: 'La sala está llena.' }
-    room.players.push({ id: clientId, name, score: 0, answered: false, connected: true })
+    room.players.push({ id: clientId, name, score: 0, answered: false, connected: true, roundPoints: 0, roundCorrect: false })
     return { room }
   })
   if (!result.room) return reply(ws, event.requestId, { ok: false, error: result.error })
@@ -144,18 +144,29 @@ async function action(ws: WebSocket, event: ClientEvent) {
       if (!isHost || room.status !== 'lobby') return { error: 'Solo el administrador puede iniciar.' }
       if (!room.players.some(item => item.connected)) return { error: 'Debe haber al menos un participante.' }
       room.status = 'playing'; room.questionIndex = 0
-      room.players.forEach(item => { item.answered = false })
+      room.players.forEach(item => { item.answered = false; item.roundPoints = 0; item.roundCorrect = false })
     } else if (event.type === 'answer') {
       if (!player || isHost) return { error: 'El administrador no responde ejercicios.' }
       if (room.status !== 'playing' || player.answered) return { error: 'La respuesta ya fue registrada.' }
+      const correctBefore = room.players.filter(item => item.answered && item.roundCorrect).length
       const attempt = Math.max(1, Math.min(3, Number(event.attempt) || 3))
-      const points = event.correct ? (attempt === 1 ? 3 : attempt === 2 ? 1 : 0) : 0
-      player.score += points; player.answered = true
+      const attemptPenalty = attempt - 1
+      const points = event.correct ? Math.max(0, 20 - correctBefore - attemptPenalty) : 0
+      player.score += points; player.roundPoints = points; player.roundCorrect = Boolean(event.correct); player.answered = true
+      const active = room.players.filter(item => item.connected)
+      const firstExerciseOfModule = room.questionIndex % 2 === 0
+      if (firstExerciseOfModule && active.length > 0 && active.every(item => item.answered)) {
+        room.questionIndex += 1
+        room.players.forEach(item => { item.answered = false; item.roundPoints = 0; item.roundCorrect = false })
+      }
       return { room, points }
     } else if (event.type === 'next') {
       if (!isHost || room.status !== 'playing') return { error: 'Solo el administrador puede avanzar.' }
+      if (room.questionIndex % 2 === 0) return { error: 'El primer ejercicio avanza automáticamente.' }
+      const active = room.players.filter(item => item.connected)
+      if (!active.length || !active.every(item => item.answered)) return { error: 'Aún faltan equipos por terminar.' }
       if (room.questionIndex >= room.exerciseIds.length - 1) room.status = 'results'
-      else { room.questionIndex += 1; room.players.forEach(item => { item.answered = false }) }
+      else { room.questionIndex += 1; room.players.forEach(item => { item.answered = false; item.roundPoints = 0; item.roundCorrect = false }) }
     }
     return { room }
   })

@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowRight, Check, ChevronLeft, Copy, Crown, Hash, LogIn, Play, RotateCcw, Users } from 'lucide-react'
 import { exercises, levelMeta, type Exercise } from '@/data/exercises'
+import { equivalentFactorization } from '@/lib/factorization'
 
-type Player = { id: string; name: string; score: number; answered: boolean; connected: boolean }
+type Player = { id: string; name: string; score: number; answered: boolean; connected: boolean; roundPoints: number; roundCorrect: boolean }
 type Room = { code: string; hostId: string; hostName: string; status: 'lobby' | 'playing' | 'results'; questionIndex: number; exerciseIds: string[]; players: Player[] }
 type Reply = { ok: boolean; error?: string; room?: Room; points?: number }
 type Send = (type: string, payload?: Record<string, unknown>) => Promise<Reply>
@@ -28,9 +29,9 @@ function MultiplayerEntry({ send, onRoom, onBack }: { send: Send; onRoom: (room:
   const [code, setCode] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  const exerciseIds = () => levelMeta.map(level => {
+  const exerciseIds = () => levelMeta.flatMap(level => {
     const candidates = exercises[level.type]
-    return candidates[Math.floor(Math.random() * candidates.length)].id
+    return shuffle(candidates).slice(0, 2).map(exercise => exercise.id)
   })
   const submit = async () => {
     setError('')
@@ -75,7 +76,7 @@ function ExerciseBuilder({ exercise, disabled, onComplete }: { exercise: Exercis
   const put = (value: string) => { if (disabled) return; const next = [...placed]; next[active] = value; setPlaced(next); setMessage(''); const empty = next.findIndex((item, index) => !item && index > active); setActive(empty >= 0 ? empty : Math.max(0, next.findIndex(item => !item))) }
   const clear = (index: number) => { const next = [...placed]; next[index] = null; setPlaced(next); setActive(index); setMessage('') }
   const verify = () => {
-    const correct = placed.join('') === exercise.answer.replaceAll(' ', '')
+    const correct = equivalentFactorization(placed.join(''), exercise.answer)
     if (correct) return onComplete(true, attempt)
     if (attempt >= 3) return onComplete(false, attempt)
     setAttempt(value => value + 1); setPlaced(answer.map(() => null)); setActive(0); setMessage('La construcción no es correcta. Intenta de nuevo.')
@@ -122,8 +123,12 @@ function ExerciseBuilder({ exercise, disabled, onComplete }: { exercise: Exercis
 function AdminGame({ room, exercise, send, onLeave }: { room: Room; exercise: Exercise; send: Send; onLeave: () => void }) {
   const connected = room.players.filter(player => player.connected)
   const answered = connected.filter(player => player.answered).length
+  const moduleIndex = Math.floor(room.questionIndex / 2)
+  const exerciseInModule = room.questionIndex % 2
+  const waitingForAdmin = exerciseInModule === 1
+  const allAnswered = connected.length > 0 && answered === connected.length
   const finalRound = room.questionIndex === room.exerciseIds.length - 1
-  return <main className="screen game-screen"><RoomHeader room={room} onLeave={onLeave} /><div className="live-game-layout"><section className="live-main"><div className="game-heading"><div><div className="eyebrow">PANEL DEL ADMINISTRADOR · RONDA {room.questionIndex + 1} / {room.exerciseIds.length}</div><h2>{levelMeta[room.questionIndex].name}</h2></div><div className="turn-card">ADMINISTRADOR<strong>{room.hostName}</strong></div></div><div className="challenge-card admin-challenge"><div className="math-display">{exercise.expression}</div><div className="game-instruction">EJERCICIO ACTUAL DE LOS EQUIPOS</div><div className="admin-progress"><strong>{answered} de {connected.length}</strong><span>equipos han terminado</span></div><p className="admin-guidance">Puedes mantener este ejercicio el tiempo que necesites o avanzar manualmente.</p><button className="primary-button admin-next" onClick={() => { void send('next') }}>{finalRound ? 'FINALIZAR PARTIDA' : 'PASAR AL SIGUIENTE EJERCICIO'} <ArrowRight /></button></div></section><aside className="live-scoreboard"><div className="eyebrow"><Users /> EQUIPOS EN TIEMPO REAL</div>{[...room.players].sort((a, b) => b.score - a.score).map((player, index) => <div className="live-score-row" key={player.id}><b>{index + 1}</b><span>{player.name}</span><strong>{player.score}</strong>{player.answered ? <Check /> : <small>{player.connected ? 'Resolviendo' : 'Desconectado'}</small>}</div>)}</aside></div></main>
+  return <main className="screen game-screen"><RoomHeader room={room} onLeave={onLeave} /><div className="live-game-layout"><section className="live-main"><div className="game-heading"><div><div className="eyebrow">PANEL DEL ADMINISTRADOR · MÓDULO {moduleIndex + 1} / 5 · EJERCICIO {exerciseInModule + 1} / 2</div><h2>{levelMeta[moduleIndex].name}</h2></div><div className="turn-card">ADMINISTRADOR<strong>{room.hostName}</strong></div></div><div className="challenge-card admin-challenge"><div className="math-display">{exercise.expression}</div><div className="game-instruction">EJERCICIO ACTUAL DE LOS EQUIPOS</div><div className="admin-progress"><strong>{answered} de {connected.length}</strong><span>equipos han terminado</span></div><p className="admin-guidance">{waitingForAdmin ? (allAnswered ? 'Todos terminaron el módulo. Decide cuándo continuar.' : 'Al terminar este ejercicio, la partida esperará tu indicación.') : 'Al terminar todos, pasarán automáticamente al segundo ejercicio del módulo.'}</p>{waitingForAdmin && <button className="primary-button admin-next" disabled={!allAnswered} onClick={() => { void send('next') }}>{finalRound ? 'FINALIZAR PARTIDA' : 'CONTINUAR AL SIGUIENTE MÓDULO'} <ArrowRight /></button>}</div></section><aside className="live-scoreboard"><div className="eyebrow"><Users /> EQUIPOS EN TIEMPO REAL</div>{[...room.players].sort((a, b) => b.score - a.score).map((player, index) => <div className="live-score-row" key={player.id}><b>{index + 1}</b><span>{player.name}</span><strong>{player.score}</strong>{player.answered ? <Check /> : <small>{player.connected ? 'Resolviendo' : 'Desconectado'}</small>}</div>)}</aside></div></main>
 }
 
 function LiveGame({ room, clientId, send, onLeave }: { room: Room; clientId: string; send: Send; onLeave: () => void }) {
@@ -132,12 +137,14 @@ function LiveGame({ room, clientId, send, onLeave }: { room: Room; clientId: str
   const host = room.hostId === clientId
   const connected = room.players.filter(item => item.connected)
   const allAnswered = connected.length > 0 && connected.every(item => item.answered)
+  const moduleIndex = Math.floor(room.questionIndex / 2)
+  const exerciseInModule = room.questionIndex % 2
   const [points, setPoints] = useState<number | null>(null)
   if (!exercise) return null
   if (host) return <AdminGame room={room} exercise={exercise} send={send} onLeave={onLeave} />
   if (!player) return null
   const submit = async (correct: boolean, attempt: number) => { const reply = await send('answer', { correct, attempt }); if (reply.ok) setPoints(reply.points || 0) }
-  return <main className="screen game-screen"><RoomHeader room={room} onLeave={onLeave} /><div className="live-game-layout"><section className="live-main"><div className="game-heading"><div><div className="eyebrow">RONDA {room.questionIndex + 1} / {room.exerciseIds.length} · {levelMeta[room.questionIndex].short}</div><h2>{levelMeta[room.questionIndex].name}</h2></div><div className="turn-card">JUGANDO COMO<strong>{player.name}</strong></div></div><div className="challenge-card">{player.answered ? <div className="answered-panel"><Check /><h3>Respuesta registrada</h3><strong>+{points ?? 0} puntos</strong><p>{allAnswered ? 'Todos respondieron.' : `Esperando a ${connected.filter(item => !item.answered).length} participante(s)…`}</p></div> : <ExerciseBuilder key={exercise.id} exercise={exercise} disabled={false} onComplete={submit} />}</div></section><aside className="live-scoreboard"><div className="eyebrow"><Users /> MARCADOR EN VIVO</div>{[...room.players].sort((a, b) => b.score - a.score).map((item, index) => <div className={`live-score-row ${item.id === clientId ? 'me' : ''}`} key={item.id}><b>{index + 1}</b><span>{item.name}</span><strong>{item.score}</strong>{item.answered && <Check />}</div>)}</aside></div></main>
+  return <main className="screen game-screen"><RoomHeader room={room} onLeave={onLeave} /><div className="live-game-layout"><section className="live-main"><div className="game-heading"><div><div className="eyebrow">MÓDULO {moduleIndex + 1} / 5 · EJERCICIO {exerciseInModule + 1} / 2 · {levelMeta[moduleIndex].short}</div><h2>{levelMeta[moduleIndex].name}</h2></div><div className="turn-card">JUGANDO COMO<strong>{player.name}</strong></div></div><div className="challenge-card">{player.answered ? <div className="answered-panel"><Check /><h3>Respuesta registrada</h3><strong>+{points ?? 0} puntos</strong><p>{allAnswered && exerciseInModule === 1 ? 'Módulo completado. Esperando al administrador…' : `Esperando a ${connected.filter(item => !item.answered).length} participante(s)…`}</p></div> : <ExerciseBuilder key={exercise.id} exercise={exercise} disabled={false} onComplete={submit} />}</div></section><aside className="live-scoreboard"><div className="eyebrow"><Users /> MARCADOR EN VIVO</div>{[...room.players].sort((a, b) => b.score - a.score).map((item, index) => <div className={`live-score-row ${item.id === clientId ? 'me' : ''}`} key={item.id}><b>{index + 1}</b><span>{item.name}</span><strong>{item.score}</strong>{item.answered && <Check />}</div>)}</aside></div></main>
 }
 
 function LiveResults({ room, clientId, onLeave }: { room: Room; clientId: string; onLeave: () => void }) {

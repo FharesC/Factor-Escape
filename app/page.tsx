@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { ArrowRight, Check, ChevronLeft, LockKeyhole, Plus, RotateCcw, Shuffle, Trophy, Users, X, Zap } from 'lucide-react'
 import { exercises, exercisesPerLevel, levelMeta, replaceExercise, teamAvatars, teamColors } from '@/data/exercises'
 import MultiplayerFlow from '@/components/multiplayer-flow'
+import { equivalentFactorization } from '@/lib/factorization'
 
 type Screen = 'home' | 'multiplayer' | 'setup' | 'game' | 'results'
 type Team = { name: string; score: number; avatar: string; color: (typeof teamColors)[number]; correct: number; errors: number; changes: number }
@@ -135,7 +136,7 @@ function Game({ teams: initial, onFinish, onExit }: { teams: Team[]; onFinish: (
   }
   const verify = () => {
     if (placed.some(piece => piece === null) || feedback) return
-    if (placed.join('') === current.answer.replaceAll(' ', '')) {
+    if (equivalentFactorization(placed.join(''), current.answer)) {
       const points = attempt === 1 ? 3 : attempt === 2 ? 1 : 0
       const nextTeams = updateCurrentTeam(team => ({ ...team, score: team.score + points, correct: team.correct + 1 }))
       setScoreFlash({ points, teams: nextTeams })
