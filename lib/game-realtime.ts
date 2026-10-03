@@ -87,7 +87,7 @@ function roomCode() {
 async function create(ws: WebSocket, event: ClientEvent) {
   const name = cleanName(event.name)
   const clientId = String(event.clientId || '').slice(0, 64)
-  if (!name || !clientId || !Array.isArray(event.exerciseIds) || event.exerciseIds.length !== 10) return reply(ws, event.requestId, { ok: false, error: 'Datos de sala inválidos.' })
+  if (!name || !clientId || !Array.isArray(event.exerciseIds) || event.exerciseIds.length !== 25) return reply(ws, event.requestId, { ok: false, error: 'Datos de sala inválidos.' })
   let room: Room | null = null
   for (let attempt = 0; attempt < 5 && !room; attempt++) {
     const code = roomCode()
@@ -154,15 +154,15 @@ async function action(ws: WebSocket, event: ClientEvent) {
       const points = event.correct ? Math.max(0, 20 - correctBefore - attemptPenalty) : 0
       player.score += points; player.roundPoints = points; player.roundCorrect = Boolean(event.correct); player.answered = true
       const active = room.players.filter(item => item.connected)
-      const firstExerciseOfModule = room.questionIndex % 2 === 0
-      if (firstExerciseOfModule && active.length > 0 && active.every(item => item.answered)) {
+      const moduleComplete = room.questionIndex % 5 === 4
+      if (!moduleComplete && active.length > 0 && active.every(item => item.answered)) {
         room.questionIndex += 1
         room.players.forEach(item => { item.answered = false; item.roundPoints = 0; item.roundCorrect = false })
       }
       return { room, points }
     } else if (event.type === 'next') {
       if (!isHost || room.status !== 'playing') return { error: 'Solo el administrador puede avanzar.' }
-      if (room.questionIndex % 2 === 0) return { error: 'El primer ejercicio avanza automáticamente.' }
+      if (room.questionIndex % 5 !== 4) return { error: 'Este ejercicio avanza automáticamente.' }
       const active = room.players.filter(item => item.connected)
       if (!active.length || !active.every(item => item.answered)) return { error: 'Aún faltan equipos por terminar.' }
       if (room.questionIndex >= room.exerciseIds.length - 1) room.status = 'results'

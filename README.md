@@ -4,9 +4,9 @@ Juego multijugador de factorización en tiempo real, inspirado en la dinámica d
 Kahoot. Una persona crea una sala y comparte un código de seis caracteres; los
 demás participantes escriben el código y su nombre para entrar.
 
-Cada partida tiene diez ejercicios, organizados en cinco módulos de dos ejercicios
-cada uno. El primer ejercicio avanza automáticamente cuando todos terminan; al
-completar el segundo, el administrador decide cuándo abrir el siguiente módulo. Las salas
+Cada partida tiene 25 ejercicios, organizados en cinco módulos de cinco ejercicios
+cada uno. Los primeros cuatro avanzan automáticamente cuando todos terminan; al
+completar el quinto, el administrador decide cuándo abrir el siguiente módulo. Las salas
 admiten hasta 20 participantes. Quien crea la sala entra como administrador: no
 resuelve ejercicios ni participa en el puntaje, ve el progreso de los equipos y
 decide cuándo avanzar. El marcador se actualiza para todos en tiempo real.
