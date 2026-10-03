@@ -48,4 +48,6 @@ test('el administrador observa y controla la ronda sin participar', async () => 
   assert.equal(team.reply('fifth-answer').points, 19)
   await handleEvent(admin, { type: 'next', requestId: 'next-module' })
   assert.equal(admin.reply('next-module').room.questionIndex, 5)
+  await handleEvent(admin, { type: 'skip-module', requestId: 'skip-module' })
+  assert.equal(admin.reply('skip-module').room.questionIndex, 10)
 })

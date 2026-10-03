@@ -208,6 +208,7 @@ body { font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", 
 .admin-progress span, .admin-guidance { color: #9caabd; font-size: 13px; }
 .admin-guidance { margin: 12px 0 28px; }
 .admin-next { margin-top: auto; }
+.admin-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: auto; }
 .answered-panel { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 480px; text-align: center; }
 .answered-panel > svg { width: 48px; height: 48px; padding: 11px; border-radius: 50%; color: #d9e4ef; background: #526f94; }
 .answered-panel h3 { margin: 20px 0 8px; font-size: 27px; }

@@ -9,7 +9,8 @@ cada uno. Los primeros cuatro avanzan automáticamente cuando todos terminan; al
 completar el quinto, el administrador decide cuándo abrir el siguiente módulo. Las salas
 admiten hasta 20 participantes. Quien crea la sala entra como administrador: no
 resuelve ejercicios ni participa en el puntaje, ve el progreso de los equipos y
-decide cuándo avanzar. El marcador se actualiza para todos en tiempo real.
+decide cuándo avanzar. También puede saltar inmediatamente al siguiente módulo.
+El marcador se actualiza para todos en tiempo real.
 
 ## Ejecutar
 

@@ -167,6 +167,12 @@ async function action(ws: WebSocket, event: ClientEvent) {
       if (!active.length || !active.every(item => item.answered)) return { error: 'Aún faltan equipos por terminar.' }
       if (room.questionIndex >= room.exerciseIds.length - 1) room.status = 'results'
       else { room.questionIndex += 1; room.players.forEach(item => { item.answered = false; item.roundPoints = 0; item.roundCorrect = false }) }
+    } else if (event.type === 'skip-module') {
+      if (!isHost || room.status !== 'playing') return { error: 'Solo el administrador puede saltar módulos.' }
+      const nextModuleStart = (Math.floor(room.questionIndex / 5) + 1) * 5
+      if (nextModuleStart >= room.exerciseIds.length) return { error: 'Ya estás en el último módulo.' }
+      room.questionIndex = nextModuleStart
+      room.players.forEach(item => { item.answered = false; item.roundPoints = 0; item.roundCorrect = false })
     }
     return { room }
   })
@@ -202,7 +208,7 @@ export async function handleEvent(ws: WebSocket, event: ClientEvent) {
     if (event.type === 'join') return await join(ws, event)
     if (event.type === 'resume') return await resume(ws, event)
     if (event.type === 'leave') return await leave(ws, event)
-    if (['start', 'answer', 'next'].includes(event.type)) return await action(ws, event)
+    if (['start', 'answer', 'next', 'skip-module'].includes(event.type)) return await action(ws, event)
   } catch (error) {
     console.error('[Factor Escape] Evento en tiempo real falló', error)
     reply(ws, event.requestId, { ok: false, error: 'No fue posible actualizar la sala.' })
